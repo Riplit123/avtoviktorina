@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>АвтоВикторина — Проект НН2KART</title>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js">
+    </script>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --surface: #ffffff;
+            --surface-light: #f4f7fc;
+            --primary-blue: #0055a4;
+            --blue-light: #0077cc;
+            --blue-dark: #003d73;
+            --accent-green: #00cc66;
+            --green-glow: rgba(0, 204, 102, 0.6);
+            --green-bright: #00e676;
+            --silver: #667788;
+            --silver-light: #8899aa;
+            --text: #1a1a1a;
+            --text-muted: #5a6b7a;
+            --accent-line: #dde4ed;
+            --transition: 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+            --transition-fast: 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            background:
+                linear-gradient(rgba(0, 85, 164, 0.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 85, 164, 0.06) 1px, transparent 1px);
+            background-size: 40px 40px;
+            mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
+            -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: linear-gradient(to bottom,
+                    transparent 0%,
+                    rgba(0, 85, 164, 0.2) 15%,
+                    rgba(0, 204, 102, 0.3) 50%,
+                    rgba(0, 85, 164, 0.2) 85%,
+                    transparent 100%);
+            pointer-events: none;
+            z-index: 0;
+            transform: translateX(-50%);
+        }
+
+        .app {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 680px;
+            padding: 24px;
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            animation: screenIn 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        .screen.active {
+            display: flex;
+        }
+
+        @keyframes screenIn {
+            from {
+                opacity: 0;
+                transform: translateY(18px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .start-screen {
+            text-align: center;
+            gap: 32px;
+            padding-top: 40px;
+        }
+
+        .start-decoration {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            opacity: 0.8;
+        }
+        .start-decoration .line {
+            flex: 1;
+            height: 1px;
+            background: var(--primary-blue);
+            opacity: 0.4;
+        }
+        .start-decoration .diamond {
+            width: 10px;
+            height: 10px;
+            background: var(--accent-green);
+            transform: rotate(45deg);
+            flex-shrink: 0;
+            box-shadow: 0 0 20px rgba(0, 204, 102, 0.5);
+        }
+
+        .start-date {
+            font-size: 0.8rem;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: var(--silver);
+            font-weight: 400;
+        }
+
+        .start-title {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            font-size: 2.6rem;
+            font-weight: 400;
+            letter-spacing: 0.04em;
+            line-height: 1.25;
+            color: var(--text);
+        }
+        .start-title span {
+            color: var(--primary-blue);
+            font-style: italic;
+        }
+
+        .start-subtitle {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            max-width: 440px;
+            line-height: 1.6;
+            font-weight: 300;
+            letter-spacing: 0.02em;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px 36px;
+            font-size: 0.9rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: var(--transition-fast);
+            position: relative;
+            font-family: inherit;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: transparent;
+            color: var(--primary-blue);
+            border: 1px solid var(--primary-blue);
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: var(--primary-blue);
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: -1;
+        }
+        .btn-primary:hover {
+            color: #ffffff;
+            border-color: var(--primary-blue);
+        }
+        .btn-primary:hover::before {
+            opacity: 1;
+        }
+        .btn-primary:active {
+            transform: scale(0.97);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--silver);
+            border: 1px solid var(--accent-line);
+        }
+        .btn-outline:hover {
+            border-color: var(--silver-light);
+            color: var(--silver-light);
+        }
+        .btn-outline:active {
+            transform: scale(0.97);
+        }
+
+        .btn-download {
+            background: var(--accent-green);
+            color: #ffffff;
+            border: 1px solid var(--accent-green);
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            box-shadow: 0 4px 14px rgba(0, 204, 102, 0.35);
+        }
+        .btn-download:hover {
+            background: #00e676;
+            border-color: #00e676;
+            box-shadow: 0 8px 28px rgba(0, 204, 102, 0.5);
+        }
+        .btn-download:active {
+            transform: scale(0.97);
+        }
+
+        .quiz-screen {
+            gap: 28px;
+            width: 100%;
+        }
+
+        .progress-scale {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            width: 100%;
+            justify-content: center;
+            padding: 8px 0;
+        }
+        .progress-mark {
+            width: 28px;
+            height: 3px;
+            background: var(--accent-line);
+            border-radius: 0;
+            transition: var(--transition);
+            position: relative;
+        }
+        .progress-mark.completed {
+            background: var(--accent-green);
+            box-shadow: 0 0 8px var(--green-glow);
+        }
+        .progress-mark.current {
+            background: var(--green-bright);
+            box-shadow: 0 0 14px var(--green-glow);
+            animation: pulse-mark 1.8s ease-in-out infinite;
+        }
+        @keyframes pulse-mark {
+            0%,
+            100% {
+                box-shadow: 0 0 8px var(--green-glow);
+            }
+            50% {
+                box-shadow: 0 0 22px rgba(0, 230, 118, 0.9);
+            }
+        }
+        .progress-dot {
+            width: 5px;
+            height: 5px;
+            background: var(--accent-line);
+            border-radius: 50%;
+            flex-shrink: 0;
+            transition: var(--transition);
+        }
+        .progress-dot.done {
+            background: var(--accent-green);
+            box-shadow: 0 0 6px var(--green-glow);
+        }
+
+        .question-number {
+            font-size: 0.7rem;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: var(--silver);
+            font-weight: 400;
+        }
+
+        .question-text {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            font-size: 1.55rem;
+            font-weight: 400;
+            letter-spacing: 0.03em;
+            line-height: 1.45;
+            text-align: center;
+            color: var(--text);
+            max-width: 520px;
+        }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            max-width: 520px;
+        }
+
+        .option-btn {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+            padding: 16px 20px;
+            background: var(--surface);
+            border: 1px solid var(--accent-line);
+            color: var(--text);
+            cursor: pointer;
+            text-align: left;
+            font-size: 0.95rem;
+            letter-spacing: 0.02em;
+            transition: var(--transition-fast);
+            position: relative;
+            font-family: inherit;
+            line-height: 1.4;
+        }
+        .option-btn:hover {
+            border-color: var(--silver);
+            background: var(--surface-light);
+            transform: translateX(2px);
+        }
+        .option-btn:active {
+            transform: scale(0.985);
+            transition: 0.1s;
+        }
+        .option-btn .option-indicator {
+            width: 8px;
+            height: 8px;
+            border: 1.5px solid var(--silver);
+            flex-shrink: 0;
+            transition: var(--transition-fast);
+            position: relative;
+        }
+        .option-btn:hover .option-indicator {
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 10px rgba(0, 85, 164, 0.4);
+        }
+        .option-btn.selected {
+            border-color: var(--primary-blue);
+            background: var(--surface-light);
+            animation: selectPulse 0.35s ease-out;
+        }
+        .option-btn.selected .option-indicator {
+            border-color: var(--primary-blue);
+            background: var(--primary-blue);
+            box-shadow: 0 0 14px rgba(0, 85, 164, 0.6);
+        }
+        @keyframes selectPulse {
+            0% {
+                transform: scale(1);
+            }
+            40% {
+                transform: scale(1.015);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        .option-letter {
+            font-size: 0.7rem;
+            letter-spacing: 0.15em;
+            color: var(--silver);
+            font-weight: 500;
+            flex-shrink: 0;
+            width: 20px;
+            text-align: center;
+        }
+        .option-btn:hover .option-letter {
+            color: var(--blue-light);
+        }
+        .option-btn.selected .option-letter {
+            color: var(--primary-blue);
+        }
+
+        /* ЭКРАН РЕЗУЛЬТАТА */
+        .result-screen {
+            gap: 28px;
+            width: 100%;
+            align-items: center;
+        }
+
+        .result-card {
+            background: #ffffff;
+            border: 1px solid var(--accent-line);
+            padding: 40px 32px 32px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 12px 32px rgba(0, 85, 164, 0.08);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 18px;
+        }
+        .result-icon {
+            width: 110px;
+            height: 110px;
+        }
+        .result-icon svg {
+            width: 100%;
+            height: 100%;
+        }
+        .result-level {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            color: #0a2a44;
+            margin: 0;
+        }
+        .result-score {
+            font-size: 1.1rem;
+            color: var(--primary-blue);
+            font-weight: 500;
+            letter-spacing: 0.03em;
+        }
+        .result-comment {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            max-width: 280px;
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        @media (max-width: 600px) {
+            .app {
+                padding: 16px;
+                max-width: 100%;
+            }
+            .start-title {
+                font-size: 1.8rem;
+            }
+            .question-text {
+                font-size: 1.25rem;
+            }
+            .option-btn {
+                padding: 14px 16px;
+                font-size: 0.85rem;
+                gap: 10px;
+            }
+            .btn {
+                padding: 12px 24px;
+                font-size: 0.8rem;
+                letter-spacing: 0.05em;
+            }
+            .progress-mark {
+                width: 20px;
+                height: 2px;
+            }
+            body::after {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- Стартовый экран -->
+        <div class="screen start-screen active" id="startScreen">
+            <div class="start-decoration">
+                <span class="line"></span>
+                <span class="diamond"></span>
+                <span class="line"></span>
+            </div>
+            <div class="start-date">Проект НН2KART · Инженерно-спортивный картинг</div>
+            <h1 class="start-title">Насколько ты<br><span>понимаешь автомобиль</span>?</h1>
+            <p class="start-subtitle">
+                Пройдите викторину из 7 вопросов и проверьте свои знания об устройстве автомобиля, физике гонок и картинге. Узнайте свой уровень в мире автоспорта!
+            </p>
+            <button class="btn btn-primary" onclick="startQuiz()">
+                Поехали!
+                <span style="font-size:0.7em;letter-spacing:0;">→</span>
+            </button>
+        </div>
+
+        <!-- Экран вопросов -->
+        <div class="screen quiz-screen" id="quizScreen">
+            <div class="progress-scale" id="progressScale"></div>
+            <div class="question-number" id="questionNumber"></div>
+            <h2 class="question-text" id="questionText"></h2>
+            <div class="options-list" id="optionsList"></div>
+        </div>
+
+        <!-- Экран результата -->
+        <div class="screen result-screen" id="resultScreen">
+            <div class="result-card" id="resultCard">
+                <div class="result-icon" id="resultIcon"></div>
+                <div class="result-level" id="resultLevel"></div>
+                <div class="result-score" id="resultScore"></div>
+                <div class="result-comment" id="resultComment"></div>
+            </div>
+            <div class="result-actions">
+                <button class="btn btn-download" onclick="downloadResult()">
+                    Скачать результат
+                </button>
+                <button class="btn btn-outline" onclick="restartQuiz()">
+                    Пройти заново
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Уровни и иконки
+        const levels = [
+            {
+                min: 0,
+                max: 2,
+                name: 'Малыш-инженер',
+                icon: `<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="50" r="45" stroke="#0055a4" stroke-width="2" fill="#f0f6ff"/>
+                    <circle cx="35" cy="35" r="5" fill="#0055a4"/>
+                    <circle cx="65" cy="35" r="5" fill="#0055a4"/>
+                    <path d="M40 55 Q50 65 60 55" stroke="#0055a4" stroke-width="3" fill="none"/>
+                    <rect x="36" y="22" width="28" height="15" rx="5" fill="none" stroke="#00cc66" stroke-width="2"/>
+                    <line x1="50" y1="22" x2="50" y2="10" stroke="#00cc66" stroke-width="2"/>
+                    <circle cx="50" cy="7" r="4" fill="#00cc66"/>
+                </svg>`,
+                comment: 'Вы только начинаете свой путь в мире автомобилей. Впереди много открытий!'
+            },
+            {
+                min: 3,
+                max: 4,
+                name: 'Тинейджер-силач',
+                icon: `<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="50" r="45" stroke="#0055a4" stroke-width="2" fill="#f4fff0"/>
+                    <circle cx="35" cy="35" r="5" fill="#0055a4"/>
+                    <circle cx="65" cy="35" r="5" fill="#0055a4"/>
+                    <rect x="40" y="45" width="20" height="20" rx="3" fill="none" stroke="#0055a4" stroke-width="2"/>
+                    <circle cx="50" cy="60" r="8" fill="none" stroke="#00cc66" stroke-width="3"/>
+                    <path d="M32 30 L36 38 M68 30 L64 38" stroke="#00cc66" stroke-width="2"/>
+                </svg>`,
+                comment: 'Вы уже кое-что знаете об автомобилях. Продолжайте в том же духе!'
+            },
+            {
+                min: 5,
+                max: 6,
+                name: 'Юный механик',
+                icon: `<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="50" r="45" stroke="#0055a4" stroke-width="2" fill="#fff8f0"/>
+                    <circle cx="38" cy="38" r="6" fill="#0055a4"/>
+                    <circle cx="62" cy="38" r="6" fill="#0055a4"/>
+                    <path d="M38 55 L50 65 L62 55" stroke="#0055a4" stroke-width="3" fill="none"/>
+                    <rect x="44" y="22" width="12" height="14" rx="2" fill="none" stroke="#00cc66" stroke-width="2"/>
+                    <line x1="50" y1="36" x2="50" y2="44" stroke="#00cc66" stroke-width="2"/>
+                    <circle cx="50" cy="50" r="4" fill="#00cc66"/>
+                </svg>`,
+                comment: 'Отличные знания! Вы уже можете помогать в гараже и на треке.'
+            },
+            {
+                min: 7,
+                max: 7,
+                name: 'Мастер картинга',
+                icon: `<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="50" r="45" stroke="#0055a4" stroke-width="2" fill="#f0faff"/>
+                    <path d="M30 65 L40 35 L60 35 L70 65" stroke="#0055a4" stroke-width="3" fill="none"/>
+                    <circle cx="50" cy="28" r="6" fill="#00cc66"/>
+                    <line x1="40" y1="58" x2="60" y2="58" stroke="#0055a4" stroke-width="2"/>
+                    <line x1="38" y1="65" x2="62" y2="65" stroke="#0055a4" stroke-width="2"/>
+                    <circle cx="50" cy="74" r="4" fill="#0055a4"/>
+                </svg>`,
+                comment: 'Вы — настоящий эксперт! Ваши знания достойны чемпионского кубка.'
+            }
+        ];
+
+        // Вопросы с правильными ответами (correctType)
+        const questions = [{
+            id: 1,
+            text: 'Какой компонент автомобиля передаёт крутящий момент от двигателя к колёсам?',
+            options: [
+                { letter: 'А', text: 'Генератор', type: 'A' },
+                { letter: 'Б', text: 'Коробка передач', type: 'B' },
+                { letter: 'В', text: 'Стартер', type: 'C' },
+                { letter: 'Г', text: 'Радиатор', type: 'D' },
+                { letter: 'Д', text: 'Тормозная система', type: 'E' },
+            ],
+            correctType: 'B'
+        }, {
+            id: 2,
+            text: 'Что такое «апекс» в картинге?',
+            options: [
+                { letter: 'А', text: 'Самая высокая точка трассы', type: 'A' },
+                { letter: 'Б', text: 'Вершина поворота, внутренняя точка траектории', type: 'B' },
+                { letter: 'В', text: 'Максимальная скорость на прямой', type: 'C' },
+                { letter: 'Г', text: 'Место обгона', type: 'D' },
+                { letter: 'Д', text: 'Линия старта', type: 'E' },
+            ],
+            correctType: 'B'
+        }, {
+            id: 3,
+            text: 'Для чего служит система охлаждения двигателя?',
+            options: [
+                { letter: 'А', text: 'Увеличивает мощность', type: 'A' },
+                { letter: 'Б', text: 'Снижает расход топлива', type: 'B' },
+                { letter: 'В', text: 'Отводит избыточное тепло от двигателя', type: 'C' },
+                { letter: 'Г', text: 'Охлаждает тормоза', type: 'D' },
+                { letter: 'Д', text: 'Очищает масло', type: 'E' },
+            ],
+            correctType: 'C'
+        }, {
+            id: 4,
+            text: 'Какая траектория прохождения поворота считается оптимальной с точки зрения физики?',
+            options: [
+                { letter: 'А', text: 'Срезать по внутренней бровке на малой скорости', type: 'A' },
+                { letter: 'Б', text: 'Широкий вход, поздний апекс, выход с ускорением', type: 'B' },
+                { letter: 'В', text: 'Тормозить как можно позже и резко поворачивать', type: 'C' },
+                { letter: 'Г', text: 'Ехать строго по внешнему радиусу', type: 'D' },
+                { letter: 'Д', text: 'Проходить поворот на постоянной скорости', type: 'E' },
+            ],
+            correctType: 'B'
+        }, {
+            id: 5,
+            text: 'Что измеряет тахометр в автомобиле?',
+            options: [
+                { letter: 'А', text: 'Скорость движения', type: 'A' },
+                { letter: 'Б', text: 'Обороты двигателя', type: 'B' },
+                { letter: 'В', text: 'Температуру охлаждающей жидкости', type: 'C' },
+                { letter: 'Г', text: 'Давление масла', type: 'D' },
+                { letter: 'Д', text: 'Уровень топлива', type: 'E' },
+            ],
+            correctType: 'B'
+        }, {
+            id: 6,
+            text: 'Какая деталь обеспечивает зажигание топливовоздушной смеси в бензиновом двигателе?',
+            options: [
+                { letter: 'А', text: 'Форсунка', type: 'A' },
+                { letter: 'Б', text: 'Свеча зажигания', type: 'B' },
+                { letter: 'В', text: 'Турбина', type: 'C' },
+                { letter: 'Г', text: 'Катушка зажигания', type: 'D' },
+                { letter: 'Д', text: 'Топливный насос', type: 'E' },
+            ],
+            correctType: 'B'
+        }, {
+            id: 7,
+            text: 'Почему при торможении перед поворотом вес автомобиля переносится вперёд?',
+            options: [
+                { letter: 'А', text: 'Из-за работы антиблокировочной системы', type: 'A' },
+                { letter: 'Б', text: 'Из-за инерции и продольного замедления', type: 'B' },
+                { letter: 'В', text: 'Из-за аэродинамического прижима', type: 'C' },
+                { letter: 'Г', text: 'Из-за поворота руля', type: 'D' },
+                { letter: 'Д', text: 'Из-за уменьшения сцепления задних колёс', type: 'E' },
+            ],
+            correctType: 'B'
+        }];
+
+        let currentQuestionIndex = 0;
+        let correctAnswersCount = 0;
+        let answeredFlags = new Array(7).fill(false);
+
+        const startScreen = document.getElementById('startScreen');
+        const quizScreen = document.getElementById('quizScreen');
+        const resultScreen = document.getElementById('resultScreen');
+        const progressScale = document.getElementById('progressScale');
+        const questionNumber = document.getElementById('questionNumber');
+        const questionText = document.getElementById('questionText');
+        const optionsList = document.getElementById('optionsList');
+        const resultIcon = document.getElementById('resultIcon');
+        const resultLevel = document.getElementById('resultLevel');
+        const resultScore = document.getElementById('resultScore');
+        const resultComment = document.getElementById('resultComment');
+
+        function switchScreen(from, to) {
+            from.classList.remove('active');
+            to.classList.add('active');
+            to.style.animation = 'none';
+            to.offsetHeight;
+            to.style.animation = 'screenIn 0.5s cubic-bezier(0.25, 0.1, 0.25, 1)';
+        }
+
+        function buildProgressScale() {
+            progressScale.innerHTML = '';
+            for (let i = 0; i < 7; i++) {
+                const mark = document.createElement('span');
+                mark.classList.add('progress-mark');
+                if (answeredFlags[i]) mark.classList.add('completed');
+                if (i === currentQuestionIndex && !answeredFlags[i]) mark.classList.add('current');
+                progressScale.appendChild(mark);
+                if (i < 6) {
+                    const dot = document.createElement('span');
+                    dot.classList.add('progress-dot');
+                    if (answeredFlags[i]) dot.classList.add('done');
+                    progressScale.appendChild(dot);
+                }
+            }
+        }
+
+        function renderQuestion() {
+            buildProgressScale();
+            const q = questions[currentQuestionIndex];
+            questionNumber.textContent = `Вопрос ${q.id} из 7`;
+            questionText.textContent = q.text;
+            optionsList.innerHTML = '';
+
+            q.options.forEach((opt) => {
+                const btn = document.createElement('button');
+                btn.classList.add('option-btn');
+                btn.innerHTML = `
+                    <span class="option-indicator"></span>
+                    <span class="option-letter">${opt.letter}</span>
+                    <span>${opt.text}</span>
+                `;
+                btn.addEventListener('click', () => selectOption(opt.type, btn, q.correctType));
+                optionsList.appendChild(btn);
+            });
+        }
+
+        function selectOption(selectedType, clickedBtn, correctType) {
+            const allBtns = optionsList.querySelectorAll('.option-btn');
+            allBtns.forEach(b => b.classList.remove('selected'));
+            clickedBtn.classList.add('selected');
+
+            if (selectedType === correctType) {
+                correctAnswersCount++;
+            }
+
+            if (!answeredFlags[currentQuestionIndex]) {
+                answeredFlags[currentQuestionIndex] = true;
+            }
+
+            setTimeout(() => {
+                if (currentQuestionIndex < 6) {
+                    currentQuestionIndex++;
+                    renderQuestion();
+                } else {
+                    showResult();
+                }
+            }, 380);
+        }
+
+        function getLevel(score) {
+            for (let level of levels) {
+                if (score >= level.min && score <= level.max) {
+                    return level;
+                }
+            }
+            return levels[0]; // fallback
+        }
+
+        function showResult() {
+            const level = getLevel(correctAnswersCount);
+            resultIcon.innerHTML = level.icon;
+            resultLevel.textContent = level.name;
+            resultScore.textContent = `Правильных ответов: ${correctAnswersCount} из 7`;
+            resultComment.textContent = level.comment;
+
+            switchScreen(quizScreen, resultScreen);
+            resultScreen.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function startQuiz() {
+            currentQuestionIndex = 0;
+            correctAnswersCount = 0;
+            answeredFlags = new Array(7).fill(false);
+            renderQuestion();
+            switchScreen(startScreen, quizScreen);
+            quizScreen.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function restartQuiz() {
+            currentQuestionIndex = 0;
+            correctAnswersCount = 0;
+            answeredFlags = new Array(7).fill(false);
+            renderQuestion();
+            switchScreen(resultScreen, quizScreen);
+            quizScreen.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function downloadResult() {
+            const card = document.getElementById('resultCard');
+            const origTransition = card.style.transition;
+            card.style.transition = 'none';
+
+            try {
+                const canvas = await html2canvas(card, {
+                    scale: 3,
+                    useCORS: true,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                });
+                card.style.transition = origTransition;
+
+                const link = document.createElement('a');
+                link.download = `nn2kart-result-${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            } catch (err) {
+                card.style.transition = origTransition;
+                console.error('Ошибка при создании PNG:', err);
+                alert('Не удалось создать изображение. Попробуйте снова.');
+            }
+        }
+
+        function initProgressScale() {
+            progressScale.innerHTML = '';
+            for (let i = 0; i < 7; i++) {
+                const mark = document.createElement('span');
+                mark.classList.add('progress-mark');
+                if (i === 0) mark.classList.add('current');
+                progressScale.appendChild(mark);
+                if (i < 6) {
+                    const dot = document.createElement('span');
+                    dot.classList.add('progress-dot');
+                    progressScale.appendChild(dot);
+                }
+            }
+        }
+
+        initProgressScale();
+        renderQuestion();
+        quizScreen.classList.remove('active');
+        startScreen.classList.add('active');
+    </script>
+</body>
+</html>
